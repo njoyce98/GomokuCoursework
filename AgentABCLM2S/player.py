@@ -7,19 +7,11 @@ from gomokuAgent import GomokuAgent
 ### Alpha beta, cost algorithm
 class Player(GomokuAgent):
     start = 0
-    prev_state = None
-    prev_score = 0
 
     def move(self, board):
         self.start = time.time()
-        self.prev_score = 0
 
-        empty_board = math.pow(self.BOARD_SIZE, 2)
-        board_count = self.empty_squares(board)
-        if board_count == empty_board or board_count == empty_board-1:
-            self.prev_state = np.zeros((self.BOARD_SIZE, self.BOARD_SIZE), dtype=int)
-
-        if board_count == empty_board:
+        if self.empty_squares(board) ==  math.pow(self.BOARD_SIZE, 2):
             #c = math.floor(self.BOARD_SIZE/2)
             #return (c, c)
             while True:
@@ -27,7 +19,7 @@ class Player(GomokuAgent):
                 if legalMove(board, moveLoc):
                     return moveLoc
 
-        out = self.minimax_ab(board, self.ID, 99, -999999, 999999, self.prev_state, None, self.prev_score)[1]
+        out = self.minimax_ab(board, self.ID, 99, -999999, 999999, np.zeros((self.BOARD_SIZE, self.BOARD_SIZE), dtype=int), None, 0)[1]
         row, col = out
         print("player " + str(self.ID) + " turn time: " + str(self.check_timer()))
         return out
@@ -39,7 +31,7 @@ class Player(GomokuAgent):
 
         empty_squares = self.empty_squares(board)
         if prev_move!= None:
-             if (time.time() - self.start > 3):
+             if (time.time() - self.start > 2.65):
              #if depth == 0:
                 if other_player == max_player:
                     return [prev_score + ((self.score_state(board, other_player, prev_move) - self.score_state(prev_state, other_player, prev_move))* ((empty_squares + 1)/100)), None, alpha, beta]
@@ -50,11 +42,9 @@ class Player(GomokuAgent):
 
         if (winningTest(other_player, board, self.X_IN_A_LINE)):
             if other_player == max_player:
-                #return [(999999999)*(empty_squares+1), None, alpha, beta]
-                return [99999999999, None, alpha, beta]
+                return [(9999999)*(empty_squares+1), None, alpha, beta]
             else:
-                #return [(-999999999)*(empty_squares+1), None, alpha, beta]
-                return [-99999999999, None, alpha, beta]
+                return [(-9999999)*(empty_squares+1), None, alpha, beta]
         elif empty_squares == 0:
             return [0, None, alpha, beta]
 
@@ -88,7 +78,6 @@ class Player(GomokuAgent):
                     return best
                 if (best[0] < beta):
                     beta = best[0]
-        #print("best: " + str(best))
         return best
 
     def empty_squares(self, board):
