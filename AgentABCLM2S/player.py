@@ -6,21 +6,22 @@ from gomokuAgent import GomokuAgent
 
 ### Alpha beta, cost algorithm
 class Player(GomokuAgent):
-    start = 0
+    start = 0 ## Time at start of round to know when to end recursions
 
     def move(self, board):
         self.start = time.time()
 
+        ##If board is empty (you are first move) place in center of board
         if self.empty_squares(board) ==  math.pow(self.BOARD_SIZE, 2):
-            #c = math.floor(self.BOARD_SIZE/2)
-            #return (c, c)
-            while True:
-                moveLoc = tuple(np.random.randint(self.BOARD_SIZE, size=2))
-                if legalMove(board, moveLoc):
-                    return moveLoc
-
+            c = math.floor(self.BOARD_SIZE/2)
+            return (c, c)
+            #while True:
+            #    moveLoc = tuple(np.random.randint(self.BOARD_SIZE, size=2))
+            #    if legalMove(board, moveLoc):
+            #        return moveLoc
+        
+        ##Start minimax algorith to find best move
         out = self.minimax_ab(board, self.ID, 99, -999999, 999999, np.zeros((self.BOARD_SIZE, self.BOARD_SIZE), dtype=int), None, 0)[1]
-        row, col = out
         print("player " + str(self.ID) + " turn time: " + str(self.check_timer()))
         return out
 
@@ -30,6 +31,7 @@ class Player(GomokuAgent):
         other_player = -player_id
 
         empty_squares = self.empty_squares(board)
+        #Cost function for board when time limit reached
         if prev_move!= None:
              if (time.time() - self.start > 2.65):
              #if depth == 0:
@@ -39,7 +41,7 @@ class Player(GomokuAgent):
                     return [prev_score - ((self.score_state(board, other_player, prev_move) - self.score_state(prev_state, other_player, prev_move) )* ((empty_squares + 1)/100)), None, alpha, beta]
 
 
-
+        #Check if board state wins
         if (winningTest(other_player, board, self.X_IN_A_LINE)):
             if other_player == max_player:
                 return [(9999999)*(empty_squares+1), None, alpha, beta]
@@ -48,11 +50,14 @@ class Player(GomokuAgent):
         elif empty_squares == 0:
             return [0, None, alpha, beta]
 
+        #Set best to worst values
         if player_id == max_player:
             best = [-math.inf, None, alpha, beta]
         else:
             best = [math.inf, None, alpha, beta]
 
+        #Generate moves then iterate
+        #Create new board score board using minimax
         legal_moves = self.gen_moves(board)
 
         for move in legal_moves:
@@ -64,6 +69,7 @@ class Player(GomokuAgent):
             board[row][col] = 0
             new_score[1] = move
 
+            #Alpha beta pruning
             if player_id == max_player:
                 if (new_score[0] > best[0]):
                     best = new_score
@@ -80,9 +86,11 @@ class Player(GomokuAgent):
                     beta = best[0]
         return best
 
+    #How many empty squares on board
     def empty_squares(self, board):
         return (board == 0).sum()
 
+    #Generates potential moves for board
     def gen_moves(self, board):
         legal_moves = []
         for row in range(self.BOARD_SIZE):
@@ -92,6 +100,7 @@ class Player(GomokuAgent):
                     legal_moves.append(move)
         return legal_moves
 
+    #Check 5x5 with move as center if a move has been played in area
     def check_nearby(self, board, move):
         if (self.empty_squares(board) == math.pow(self.BOARD_SIZE, 2)):
             return True
@@ -107,6 +116,8 @@ class Player(GomokuAgent):
                     return True
         return False
 
+    #Score state by performing row and diag tests, rotating move and board 90
+    #Then performing tests again.
     def score_state(self, board, player_id, move):
         score = 0
         score += (self.rowTest(player_id, board, move) + self.diagTest(player_id, board, move))
@@ -117,7 +128,8 @@ class Player(GomokuAgent):
         score += (self.rowTest(player_id, boardPrime, movePrime) + self.diagTest(player_id, boardPrime, movePrime))
         score -= (self.rowTest(-player_id, boardPrime, movePrime) + self.diagTest(-player_id, boardPrime, movePrime))
         return score
-
+    
+    #Score row of move
     def rowTest(self, player_id, board, move):
         row, col = move
         out = 0
@@ -151,6 +163,7 @@ class Player(GomokuAgent):
             c+=1
         return out
 
+    #Score diagonal of move
     def diagTest(self, player_id, board, move):
         row, col = move
         out = 0
@@ -197,7 +210,26 @@ class Player(GomokuAgent):
 
         return out
 
-
-
     def check_timer(self):
         return time.time()-self.start
+
+# Many versions of agents have been produced and tested for this coursework.
+# A basic 3x3 tic-tac-toe AI was initially implemented, when the maximum depth
+# of the game state tree can be explored this was perfect as it returned 1 for a win
+# or -1 for a loss and optimized upon this. However when it is not possible to reach
+# the maximum depth such as when the size of the board was increased and a turn timer
+# of 5 secs a cost algorithm must be implemented. This needs to score the boards state
+# and return a value. Threat space-search was implemented with a bank of saved
+# arrays of threats with a cost attatched to them. In reality the board needed to be
+# chopped up too many times with varying sizes of threat patterns and took too long
+# to be efficient with 5 second timer. I created an algorithm that searches a
+# 5 long array of board and gives a value (if there is no blocking enemy piece)
+# of the (amount of friendly pieces)^2 + (highest streak of friendly pieces)^3.
+# Enemy costs are weighted slightly higher as when evalutating an enemy piece,
+# it would have already been played and therefore when the algorithm tried to mirror
+# piece placement to neutralize it, it now looks to block enemy pieces.
+# Instead of searching the whole board, to maximize depth the algorithm only looks
+# at the weighting of where the move you are going to make's rows and diagonals.
+# In the minimax method this is passed forward as current score. Valid moves are
+# only selected if they are within a 5x5 of another piece, this cuts down the amount
+# of child nodes spawned by the tree significantly.
